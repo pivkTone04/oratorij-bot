@@ -1,6 +1,5 @@
 package com.relaxingleg.commands;
 
-
 import com.relaxingleg.ICommand;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -9,17 +8,75 @@ import net.dv8tion.jda.api.interactions.commands.build.OptionData;
 import net.dv8tion.jda.api.utils.FileUpload;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Scanner;
+import java.util.*;
 
 public class Ekipe implements ICommand {
     private static final int MIN_TEAM_SIZE = 2;
     private static final int MAX_TEAM_SIZE = 14;
+    String outputFileName = "src/main/resources/ekipe.txt";
 
-    private class SkupinaClass {
-        private ArrayList<ArrayList<String>> skupine;
+    private class EkipaClass {
+        String[][] ekipe;
+
+        public EkipaClass(SkupinaClass sc, int velikostEkipe) {
+            int stEkip = (int) Math.ceil(sc.getSteviloUdelezencev() / velikostEkipe);
+            ekipe = new String[stEkip][velikostEkipe];
+
+            int x = 0;
+            int y = 0;
+            for (ArrayList<String> skupina : sc) {
+                for (String s : skupina) {
+                    if (x >= stEkip) {
+                        x = 0;
+                        y++;
+                    }
+
+                    if (y >= velikostEkipe) {
+                        return;
+                    }
+
+                    ekipe[x][y] = s;
+                    x++;
+                }
+            }
+        }
+
+        public void izpisiEkipeVodoravno() {
+            try (FileWriter fw = new FileWriter(outputFileName); PrintWriter pw = new PrintWriter(fw)) {
+                for (int i = 0; i < ekipe[0].length; i++) {
+                    pw.printf("%20s", (i + 1) + " skupina");
+                }
+
+                pw.println();
+
+                for (String[] ekipa : ekipe) {
+                    for (String s : ekipa) {
+                        pw.printf("%20s", s);
+                    }
+                    pw.println();
+                }
+            } catch (IOException e) {
+                System.err.println("ERR: Napaka pri branju/pisanju datoteke: " + e);
+            }
+        }
+
+        public void izpisiEkipeNavzdol() {
+            try (FileWriter fw = new FileWriter(outputFileName); PrintWriter pw = new PrintWriter(fw)) {
+                for (int i = 0; i < ekipe[0].length; i++) {
+                    pw.println((i + 1) + " skupina\n");
+                    for (String s : ekipe[i]) {
+                        pw.println("  " + s);
+                    }
+                    pw.println();
+                }
+            } catch (IOException e) {
+                System.err.println("ERR: Napaka pri branju/pisanju datoteke: " + e);
+            }
+        }
+    }
+
+    private class SkupinaClass implements Iterable<ArrayList<String>> {
+        public ArrayList<ArrayList<String>> skupine;
 
         private static ArrayList<String> preberiSkupino(String imeDatoteke) {
             ArrayList<String> skupina = new ArrayList<>();
@@ -37,7 +94,7 @@ public class Ekipe implements ICommand {
         }
 
         public SkupinaClass() {
-            skupine = new ArrayList<>();
+            skupine = new ArrayList<ArrayList<String>>();
 
             for (int i = 1; i < 10; i++) {
                 ArrayList<String> skupina = preberiSkupino("src/main/resources/" + i + "skupina.txt");
@@ -48,35 +105,29 @@ public class Ekipe implements ICommand {
 
         public int getSteviloUdelezencev() {
             int velikost = 0;
-            for (ArrayList a : skupine) {
-                velikost += a.size();
+            for (ArrayList<String> al : skupine) {
+                velikost += al.size();
             }
             return velikost;
         }
 
-        public String[][] ustvariEkipe(int velikostEkipe) {
-            int stEkip = (int) Math.ceil(this.getSteviloUdelezencev() / velikostEkipe);
-            String[][] ekipe = new String[stEkip][velikostEkipe];
+        @Override
+        public Iterator<ArrayList<String>> iterator() {
+            return new Iterator<ArrayList<String>>() {
+                private int index = 0;
 
-            int x = 0;
-            int y = 0;
-            for (ArrayList<String> skupina : skupine) {
-                for (String s : skupina) {
-                    if (x >= stEkip) {
-                        x = 0;
-                        y++;
-                    }
-
-                    if (y >= velikostEkipe) {
-                        return ekipe;
-                    }
-
-                    ekipe[x][y] = s;
-                    x++;
+                public boolean hasNext() {
+                    return index < skupine.size();
                 }
-            }
 
-            return ekipe;
+                public ArrayList<String> next() {
+                    if (!hasNext()) {
+                        throw new NoSuchElementException();
+                    }
+
+                    return skupine.get(index++);
+                }
+            };
         }
     }
 
@@ -103,9 +154,7 @@ public class Ekipe implements ICommand {
     public void execute(SlashCommandInteractionEvent event) {
         int velikostEkip = event.getOption("velikostekip").getAsInt();
 
-        SkupinaClass skupine = new SkupinaClass();
-        String[][] ekipe = skupine.ustvariEkipe(velikostEkip);
-        izpisEkipeNavzdol(ekipe);
+        new EkipaClass(new SkupinaClass(), velikostEkip).izpisiEkipeNavzdol();
 
         String sklanjatev = switch (velikostEkip) {
             case 1 -> "skupino";
@@ -117,42 +166,5 @@ public class Ekipe implements ICommand {
 
         File file = new File("src/main/resources/ekipe.txt");
         event.getChannel().sendFiles(FileUpload.fromData(file)).queue();
-    }
-
-    private static void izpisiEkipeVodoravno(String[][] ekipe) {
-        String fileName = "src/main/resources/ekipe.txt";
-
-        try (FileWriter fw = new FileWriter(fileName); PrintWriter pw = new PrintWriter(fw)) {
-            for (int i = 0; i < ekipe[0].length; i++) {
-                pw.printf("%20s", (i + 1) + " skupina");
-            }
-
-            pw.println();
-
-            for (String[] ekipa : ekipe) {
-                for (String s : ekipa) {
-                    pw.printf("%20s", s);
-                }
-                pw.println();
-            }
-        } catch (IOException e) {
-            System.err.println("ERR: Napaka pri branju/pisanju datoteke: " + e);
-        }
-    }
-
-    private static void izpisEkipeNavzdol(String[][] ekipe){
-        String fileName = "src/main/resources/ekipe.txt";
-        try (FileWriter fw = new FileWriter(fileName); PrintWriter pw = new PrintWriter(fw)) {
-            for (int i = 0; i < ekipe[0].length; i++) {
-                pw.printf("%20s", (i + 1) + " skupina\n");
-                for (String s : ekipe[i]) {
-                    pw.printf("%20s\n", s);
-                }
-                pw.println();
-            }
-        } catch (IOException e) {
-            System.err.println("ERR: Napaka pri branju/pisanju datoteke: " + e);
-        }
-
     }
 }
