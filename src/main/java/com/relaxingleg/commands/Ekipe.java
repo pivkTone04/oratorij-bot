@@ -56,7 +56,7 @@ public class Ekipe implements ICommand {
 
         public String[][] ustvariEkipe(int velikostEkipe) {
             int stEkip = (int) Math.ceil(this.getSteviloUdelezencev() / velikostEkipe);
-            String[][] ekipe = new String[velikostEkipe][stEkip];
+            String[][] ekipe = new String[stEkip][velikostEkipe];
 
             int x = 0;
             int y = 0;
@@ -71,7 +71,7 @@ public class Ekipe implements ICommand {
                         return ekipe;
                     }
 
-                    ekipe[y][x] = s;
+                    ekipe[x][y] = s;
                     x++;
                 }
             }
@@ -105,7 +105,7 @@ public class Ekipe implements ICommand {
 
         SkupinaClass skupine = new SkupinaClass();
         String[][] ekipe = skupine.ustvariEkipe(velikostEkip);
-        izpisiEkipeTxt(ekipe);
+        izpisEkipeNavzdol(ekipe);
 
         String sklanjatev = switch (velikostEkip) {
             case 1 -> "skupino";
@@ -138,5 +138,21 @@ public class Ekipe implements ICommand {
         } catch (IOException e) {
             System.err.println("ERR: Napaka pri branju/pisanju datoteke: " + e);
         }
+    }
+
+    private static void izpisEkipeNavzdol(String[][] ekipe){
+        String fileName = "src/main/resources/ekipe.txt";
+        try (FileWriter fw = new FileWriter(fileName); PrintWriter pw = new PrintWriter(fw)) {
+            for (int i = 0; i < ekipe[0].length; i++) {
+                pw.printf("%20s", (i + 1) + " skupina\n");
+                for (String s : ekipe[i]) {
+                    pw.printf("%20s\n", s);
+                }
+                pw.println();
+            }
+        } catch (IOException e) {
+            System.err.println("ERR: Napaka pri branju/pisanju datoteke: " + e);
+        }
+
     }
 }
