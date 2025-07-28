@@ -119,7 +119,7 @@ public class Ekipe implements ICommand {
         event.getChannel().sendFiles(FileUpload.fromData(file)).queue();
     }
 
-    private static void izpisiEkipeTxt(String[][] ekipe) {
+    private static void izpisiEkipeVodoravno(String[][] ekipe) {
         String fileName = "src/main/resources/ekipe.txt";
 
         try (FileWriter fw = new FileWriter(fileName); PrintWriter pw = new PrintWriter(fw)) {
